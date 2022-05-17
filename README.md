@@ -39,7 +39,7 @@ The tool receives a set of uncertain constraints and produces the list of
 concrete realizations of the OCL constraints, i.e., considering all potential
 alternative ways to define the OCL invariants. For instance, an invariant
 with an uncertain constant `[2..5]` will produce four variants of the specification,
-each with a different concrete value for the constant.
+each with a different invariant include a different concrete value for the constant.
 
 The tool is implemented in Java and used JFlex and CUP (included in the distribution)
 to parse the input.
