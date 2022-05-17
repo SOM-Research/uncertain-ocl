@@ -51,5 +51,5 @@ and emits the concrete OCL constraints to the standard output.
 This tool is part of joint work by Loli Burgueño, Jordi Cabot and Robert Clarisó
 on dealing with uncertainty in OCL specifications.
 
-You can contact the authors at <rclariso AT uoc.edu>.
+You can contact the authors at `<rclariso AT uoc.edu>`.
     
