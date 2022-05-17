@@ -1,0 +1,385 @@
+package UncertainOCL;
+
+import java_cup.runtime.*;
+import java.util.List;
+
+parser code {:
+	public static void main(String args[]) throws Exception {
+		new parser(new Yylex(System.in)).parse();
+	}
+:}
+
+terminal BEG_UNCERTAIN_INV, BEG_UNCERTAIN_ALT, END_UNCERTAIN;
+terminal COMMA, UNKNOWN, RANGE;
+terminal String LABEL;
+
+terminal CONTEXT, INVARIANT, PRECONDITION, POSTCONDITION, BODY, SEMICOLON;
+terminal LET, IN;
+terminal DOT, ARROW, BAR;
+terminal PLUS, MINUS, UMINUS, STAR, DIV;
+terminal AND, OR, XOR, NOT, IMPLIES;
+terminal IF, THEN, ELSE, ENDIF;
+terminal LPAREN, RPAREN, BEG_KEY, END_KEY;
+terminal String IDENT, NUMBER_LIT, STRING_LIT;
+terminal LT, GT, LEQ, GEQ, EQ, NEQ;
+
+non terminal Concretization spec;
+non terminal Concretization constraint_list, constraint, normal_constraint, uncertain_constraint;
+non terminal Concretization expression, base_expression, navigation_expression, set_literal_expression;
+non terminal Concretization method_call, params, param_list, one_param;
+non terminal Concretization uncertain_expression, alternative_list, alternative;
+non terminal String optional_label, optional_name, literal_exp, binary_operator, separator;
+
+precedence left IMPLIES;
+precedence left XOR;
+precedence left OR;
+precedence left AND;
+precedence left EQ, NEQ;
+precedence left LT, GT, LEQ, GEQ;
+precedence left PLUS, MINUS;  
+precedence left STAR, DIV;
+precedence left ARROW;
+precedence left DOT;
+precedence left NOT;
+precedence left UMINUS;
+
+spec
+::= {: /* Empty OCL specification */ :} 
+  | constraint_list:list
+    {:
+      List<String> options = list.enumerateText();
+      List<String> labels  = list.enumerateLabels();
+      System.out.println("Total of " + options.size() + " concretizations\n");
+      assert( options.size() == labels.size() );
+      for(int i = 0; i < options.size(); i++) {
+        String text  = options.get(i);
+        String label = labels.get(i);
+        System.out.println("-- Concretization #" + (i+1));
+        System.out.println("-- Labels: " + label+ "\n");
+        System.out.println(text);
+        System.out.println("--------\n");
+      }
+    :}
+  ;
+
+constraint_list 
+::= constraint:c
+    {: if (c.isEmpty()) {
+         RESULT = new Concretization(new Alternative(""));
+       } else {
+         RESULT = c;
+       }
+    :}
+  | constraint:c constraint_list:list
+    {: 
+      // Combine each concretization of c with each concretization of the rest of s 
+      // Add a blank line between these constraints and the rest of the model
+
+      if (c.isEmpty()) {
+        if (list.isEmpty()) {
+          RESULT = new Concretization(new Alternative(""));
+        } else {
+          RESULT = list;
+        }
+      } else {
+        if (list.isEmpty()) {
+          RESULT = c;
+        } else {
+          RESULT = c.combine(list, "\n");
+        }
+      }
+    :}
+  ;
+
+constraint 
+::= normal_constraint:c
+    {: RESULT = c;  :}
+  | uncertain_constraint:c
+    {: RESULT = c;  :}
+  ;
+
+uncertain_constraint
+::= BEG_UNCERTAIN_INV optional_label:lb normal_constraint:c END_UNCERTAIN
+    {: 
+      if (!lb.isEmpty()) {
+        c.addLabel(lb);
+      }
+      Alternative alt = new Alternative("");
+      Concretization blank = new Concretization(alt);
+      c.addAlternatives(blank);
+      RESULT = c;
+    :}
+  ;
+
+optional_label 
+::=          {: RESULT = ""; :}
+  | LABEL:lb {: RESULT = lb; :}
+  ;
+
+optional_name
+::=          {: RESULT = ""; :}
+  | IDENT:id {: RESULT = id;  :}
+  ;
+
+normal_constraint
+::= CONTEXT IDENT:id INVARIANT optional_name:n SEMICOLON expression:e
+    {: String text = "context " + id + " inv " + n + ": \n  ";  
+       e.prepend(text);
+       e.append("\n");
+       RESULT = e;
+    :}  
+  | CONTEXT IDENT:id SEMICOLON SEMICOLON IDENT:operation LPAREN params:p RPAREN SEMICOLON IDENT:type
+    PRECONDITION optional_name:n SEMICOLON expression:e
+    {: 
+      String text = "context " + id + "::" + operation + "(";
+      List<String> params = p.enumerateText();
+      assert(!params.isEmpty());
+      String paramText = params.get(0); 
+      text = text + "):" + type + " pre " + n + ": \n  ";
+      e.prepend(text);
+      e.append("\n");
+      RESULT = e;
+    :}
+  | CONTEXT IDENT:id SEMICOLON SEMICOLON IDENT:operation LPAREN params:p RPAREN SEMICOLON IDENT:type
+    POSTCONDITION optional_name:n SEMICOLON expression:e
+    {: 
+      String text = "context " + id + "::" + operation + "(";
+      List<String> params = p.enumerateText();
+      assert(!params.isEmpty());
+      String paramText = params.get(0); 
+      text = text + "):" + type + " post " + n + ":\n  ";
+      e.prepend(text);
+      e.append("\n");
+      RESULT = e;
+    :}
+  | CONTEXT IDENT:id SEMICOLON SEMICOLON IDENT:operation LPAREN params:p RPAREN SEMICOLON IDENT:type
+    BODY optional_name:n SEMICOLON expression:e
+    {: 
+      String text = "context " + id + "::" + operation + "(";
+      List<String> params = p.enumerateText();
+      assert(!params.isEmpty());
+      String paramText = params.get(0); 
+      text = text + "):" + type + " body " + n + ":\n  ";
+      e.prepend(text);
+      e.append("\n");
+      RESULT = e;
+    :}
+  ;
+
+expression
+::= navigation_expression:e
+    {: RESULT = e; :}
+  | navigation_expression:e1 binary_operator:op expression:e2
+    {:
+      e1.append(" " + op + " ");
+      RESULT = e1.combine(e2, "");
+    :}
+  ;
+
+navigation_expression
+::= base_expression:e
+    {: RESULT = e; :}
+  | navigation_expression:e1 DOT expression:e2
+    {: 
+      e1.append(".");
+      RESULT = e1.combine(e2, "");
+    :}
+  | navigation_expression:e1 ARROW method_call:m
+    {:
+      e1.append("->");
+      RESULT = e1.combine(m, "");
+    :}
+  ;
+
+binary_operator
+::= PLUS
+    {: RESULT = "+"; :}
+  | MINUS
+    {: RESULT = "-"; :}
+  | STAR
+    {: RESULT = "*"; :}
+  | DIV
+    {: RESULT = "/"; :}
+  | LT
+    {: RESULT = "<"; :}
+  | GT
+    {: RESULT = ">"; :}
+  | LEQ
+    {: RESULT = "<="; :}
+  | GEQ
+    {: RESULT = ">="; :}
+  | EQ
+    {: RESULT = "="; :}
+  | NEQ
+    {: RESULT = "<>"; :}
+  | AND
+    {: RESULT = "and"; :}
+  | OR
+    {: RESULT = "or"; :}
+  | XOR
+    {: RESULT = "xor"; :}
+  | IMPLIES
+    {: RESULT = "implies"; :}
+  ;
+
+base_expression
+::= literal_exp:c
+    {: 
+      Alternative alt = new Alternative(c);
+      RESULT = new Concretization(alt);
+    :}
+  | LPAREN expression:e RPAREN
+    {:
+      e.prepend( "( ");
+      e.append(" )");
+      RESULT = e;
+    :}
+  | IDENT:id
+    {: 
+      Alternative alt = new Alternative(id); 
+      RESULT = new Concretization(alt);
+    :}
+  | method_call:m
+    {: RESULT = m; :}
+  | uncertain_expression:e
+    {: RESULT = e; :}
+  | set_literal_expression:e
+    {: RESULT = e; :}
+  | UNKNOWN
+    {: /* Create a concretization with no alternatives - a constraint with 'unknown' cannot be concretized*/ 
+       RESULT = new Concretization(); :}
+  | IF expression:cond THEN expression:t ELSE expression:e ENDIF
+    {: 
+      cond.prepend(" if ");
+      cond.append(" then ");
+      e.prepend(" else ");
+      e.append(" endif ");
+      RESULT = cond.combine(t).combine(e);
+     :}
+  | LET IDENT:id SEMICOLON IDENT:type EQ expression:exp1 IN expression:exp2
+    {:
+      String text = "let " + id +  ": " + type + " = ";
+      exp1.prepend(text);
+      exp1.append(" in ");
+      RESULT = exp1.combine(exp2);
+    :}
+  | NOT navigation_expression:e
+    {:  e.prepend("not ");
+        RESULT = e;
+     :}
+  | MINUS navigation_expression:e 
+    {: 
+      e.prepend("-");
+      RESULT = e;
+    :}
+    %prec UMINUS
+  ; 
+
+uncertain_expression
+::= BEG_UNCERTAIN_ALT alternative_list:l END_UNCERTAIN
+    {: RESULT = l; :}
+  ;
+
+alternative_list
+::= alternative:a
+    {:  
+       RESULT = a;
+    :}
+  | alternative:a COMMA alternative_list:l
+    {: 
+      a.addAlternatives(l);
+      RESULT = a;
+    :}
+  ;
+
+alternative
+::= optional_label:lb expression:e
+    {: 
+      e.addLabel(lb);
+      RESULT = e;
+    :}
+  | optional_label:lb NUMBER_LIT:n1 RANGE NUMBER_LIT:n2
+   {:
+      Concretization c = new Concretization();
+      int lower = 0;
+      int upper = 0;
+      try { 
+        lower = Integer.parseInt(n1);
+        upper = Integer.parseInt(n2);
+      } catch (NumberFormatException e) {
+        System.err.println("Error: numbers in ranges must be integers: " + n1 + " .. " + n2 + "\n");
+        System.exit(1);
+      }
+      if (upper < lower) {
+        System.err.println("Error: upper bound in range must be above lower bound: "+ n1 + " .. " + n2 + "\n");
+        System.exit(1);
+      }
+      for(int i = lower; i <= upper; i++) {
+        Alternative alt = new Alternative(Integer.toString(i));
+        c.addAlternative(alt);
+      }
+      RESULT = c;
+   :}
+  ;
+
+literal_exp
+::= NUMBER_LIT:l 
+    {: RESULT = l; :}
+  | STRING_LIT:l
+    {: RESULT = l; :}
+  ;
+
+method_call
+::= IDENT:id LPAREN params:p RPAREN
+    {: 
+      p.prepend(id + "(");
+      p.append(")");
+      RESULT = p;
+    :}
+  ;
+
+params
+::= {: /* No parameters */ 
+       RESULT = new Concretization(new Alternative("")); :}
+  | param_list:l 
+    {: RESULT = l; :}
+  ;
+
+param_list
+::= one_param:e
+    {: RESULT = e; :}
+  | one_param:e separator:s param_list:l 
+    {: 
+       e.append(s);
+       RESULT = e.combine(l);
+    :}
+  ;
+
+one_param
+::= expression:e
+    {: RESULT = e; :}
+  | IDENT:id1 SEMICOLON IDENT:id2
+    {: String text = id1 + ": " + id2;
+       Alternative alt = new Alternative(text);
+       RESULT = new Concretization(alt); :}
+  ;
+
+
+separator
+::= COMMA
+    {: RESULT = ", "; :}
+  | BAR
+    {: RESULT = " | "; :}
+  ;
+
+set_literal_expression
+::= BEG_KEY params:p END_KEY
+    {:
+      p.prepend("{ ");
+      p.append(" }");
+      RESULT = p;
+    :}
+  ;
+
+
+
