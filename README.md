@@ -41,7 +41,7 @@ alternative ways to define the OCL invariants. For instance, an invariant
 with an uncertain constant `[2..5]` will produce four variants of the specification,
 each with a different invariant include a different concrete value for the constant.
 
-The tool is implemented in Java and used JFlex and CUP (included in the distribution)
+The tool is implemented in Java and uses JFlex and CUP (included in the distribution)
 to parse the input.
 
 The scripts `compile.sh`and `execute.sh` can be used to compile and execute
