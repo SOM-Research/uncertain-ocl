@@ -3,7 +3,7 @@ An extension of OCL for expressing uncertainty in integrity constraints
 
 UML diagrams can be annotated with OCL (Object Constraint Language) constraints that describe 
 the business logic and the integrity constraints of the system being designed. Nevertheless, 
-sometimes designers are uncertain about these should constraints should be defined. Maybe they 
+sometimes designers are uncertain about how these constraints should be defined. Maybe they 
 don't have enough information, maybe there are alternative definitions or maybe they want to 
 postpone the decision until a later stage of the design.
 
