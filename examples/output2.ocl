@@ -1,0 +1,58 @@
+Total of 4 concretizations
+
+-- Concretization #1
+-- Labels: none
+
+context Person::totalFees():Real body :
+  self.product->collect(p: Product |  p.monthlyFee)->sum()
+
+context Person::totalBalance():Real body :
+  self.product->collect(p: Product |   if ( p.oclIsTypeOf(Account) ) then  p.oclAsType(Account).balance  else 0.0 endif )
+
+context Person inv VIPClient: 
+  self.vip = ( self.totalFees() >= 500.0 )
+
+--------
+
+-- Concretization #2
+-- Labels: none
+
+context Person::totalFees():Real body :
+  self.product->collect(p: Product |  p.monthlyFee)->sum()
+
+context Person::totalBalance():Real body :
+  self.product->collect(p: Product |   if ( p.oclIsTypeOf(Account) ) then  p.oclAsType(Account).balance  else 0.0 endif )
+
+context Person inv VIPClient: 
+  self.vip = ( self.totalBalance() >= 1000.0 )
+
+--------
+
+-- Concretization #3
+-- Labels: none
+
+context Person::totalFees():Real body :
+  self.product->collect(p: Product |  p.monthlyFee)->sum()
+
+context Person::totalBalance():Real body :
+  self.product->collect(p: Product |   if ( p.oclIsTypeOf(Account) ) then  p.oclAsType(Account).balance  else  if ( p.oclIsKindOf(Loan) ) then  p.oclAsType(Loan).principal  else 0.0 endif  endif )
+
+context Person inv VIPClient: 
+  self.vip = ( self.totalFees() >= 500.0 )
+
+--------
+
+-- Concretization #4
+-- Labels: none
+
+context Person::totalFees():Real body :
+  self.product->collect(p: Product |  p.monthlyFee)->sum()
+
+context Person::totalBalance():Real body :
+  self.product->collect(p: Product |   if ( p.oclIsTypeOf(Account) ) then  p.oclAsType(Account).balance  else  if ( p.oclIsKindOf(Loan) ) then  p.oclAsType(Loan).principal  else 0.0 endif  endif )
+
+context Person inv VIPClient: 
+  self.vip = ( self.totalBalance() >= 1000.0 )
+
+--------
+

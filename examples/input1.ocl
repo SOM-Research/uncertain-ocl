@@ -1,0 +1,8 @@
+context Account inv NegBalanceFees:
+  [ if self.balance <= 0.0 then
+    self.monthlyFees = 
+      [ 50.0, -(self.balance*0.05) ]
+  else 
+    self.monthlyFees = 20.0
+  endif,
+  self.monthlyFees = 20.0 ] 

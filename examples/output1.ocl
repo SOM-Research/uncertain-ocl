@@ -1,0 +1,23 @@
+-- Concretization #1
+-- Labels: none
+
+context Account inv NegBalanceFees: 
+   if self.balance <= 0.0 then  self.monthlyFees = 50.0  else self.monthlyFees = 20.0 endif 
+
+--------
+
+-- Concretization #2
+-- Labels: none
+
+context Account inv NegBalanceFees: 
+   if self.balance <= 0.0 then  self.monthlyFees = -( self.balance * 0.05 )  else self.monthlyFees = 20.0 endif 
+
+--------
+
+-- Concretization #3
+-- Labels: none
+
+context Account inv NegBalanceFees: 
+  self.monthlyFees = 20.0
+
+--------

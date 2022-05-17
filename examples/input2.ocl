@@ -1,0 +1,24 @@
+-- Total fees payed monthly by a client
+context Person::totalFees(): Real
+  body: self.product->collect(p:Product|
+    p.monthlyFee)->sum()
+
+-- Total balance of a client
+-- Should loans be included?
+context Person::totalBalance(): Real
+  body: self.product->collect(p: Product | 
+    if (p.oclIsTypeOf(Account)) then
+      p.oclAsType(Account).balance
+    else [ 0.0,
+      if (p.oclIsKindOf(Loan)) then
+        p.oclAsType(Loan).principal
+      else 
+         0.0
+      endif ]
+    endif)
+
+context Person inv VIPClient:
+  self.vip =
+    [ ( self.totalFees() >= 500.0 ),
+      ( self.totalBalance() >= 1000.0 ) ]  
+
